@@ -2,7 +2,27 @@ apply plugin: 'groovy'
 
 /**
  * This is from https://jmockit.github.io/tutorial/Introduction.html#runningTests
+ *
+ * The --add-opens flags are required on Java 17+ because Guice's bundled
+ * cglib and JMockit use reflection against internal JDK modules, which are
+ * locked down by the Java module system.
  */
 test {
-    jvmArgs "-javaagent:${classpath.find { it.name.contains("jmockit") }.absolutePath}"
+    jvmArgs(
+            "-javaagent:${classpath.find { it.name.contains("jmockit") }.absolutePath}",
+            "--add-opens=java.base/java.lang=ALL-UNNAMED",
+            "--add-opens=java.base/java.lang.reflect=ALL-UNNAMED",
+            "--add-opens=java.base/java.lang.invoke=ALL-UNNAMED",
+            "--add-opens=java.base/java.io=ALL-UNNAMED",
+            "--add-opens=java.base/java.nio=ALL-UNNAMED",
+            "--add-opens=java.base/java.net=ALL-UNNAMED",
+            "--add-opens=java.base/java.util=ALL-UNNAMED",
+            "--add-opens=java.base/java.util.concurrent=ALL-UNNAMED",
+            "--add-opens=java.base/java.util.concurrent.atomic=ALL-UNNAMED",
+            "--add-opens=java.base/sun.nio.ch=ALL-UNNAMED",
+            "--add-opens=java.base/sun.nio.fs=ALL-UNNAMED",
+            "--add-opens=java.base/jdk.internal.loader=ALL-UNNAMED",
+            "--add-opens=java.base/jdk.internal.ref=ALL-UNNAMED",
+            "--add-opens=java.base/jdk.internal.misc=ALL-UNNAMED"
+    )
 }

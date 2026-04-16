@@ -40,7 +40,7 @@ class TestFlushTask extends Specification {
        null                || IllegalArgumentException
     }
 
-    def "SchedulerType for value #flushSchedulerType, #flushCronExpression, #flushInterval is null"() {
+    def "SchedulerType for value #flushCronExpression is null"() {
         expect:
         Flush.getTimer(new FlushConfiguration(flushCronExpression)) == result
 

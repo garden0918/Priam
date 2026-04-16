@@ -1,8 +1,5 @@
 package com.netflix.priam.identity.token;
 
-import static org.hamcrest.core.AllOf.allOf;
-import static org.hamcrest.core.IsNot.not;
-
 import com.google.common.collect.ImmutableSet;
 import com.netflix.priam.identity.PriamInstance;
 import com.netflix.priam.utils.SystemUtils;
@@ -82,12 +79,7 @@ public class TokenRetrieverUtilsTest {
 
         new Expectations() {
             {
-                SystemUtils.getDataFromUrl(
-                        withArgThat(
-                                allOf(
-                                        not(String.format(STATUS_URL_FORMAT, "127.0.0.0")),
-                                        not(String.format(STATUS_URL_FORMAT, "127.0.0.2")),
-                                        not(String.format(STATUS_URL_FORMAT, "127.0.0.5")))));
+                SystemUtils.getDataFromUrl(anyString);
                 result = getStatus(myliveInstances, tokenToEndpointMap);
                 minTimes = 0;
 

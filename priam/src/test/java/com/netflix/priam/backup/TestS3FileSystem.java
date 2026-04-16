@@ -137,7 +137,7 @@ public class TestS3FileSystem {
         MockS3PartUploader.setup();
         MockS3PartUploader.completionFailure = true;
         S3FileSystem fs = injector.getInstance(S3FileSystem.class);
-        fs.setS3Client(new MockAmazonS3Client().getMockInstance());
+        fs.setS3Client(new StubS3Client());
         RemoteBackupPath backupfile = injector.getInstance(RemoteBackupPath.class);
         backupfile.parseLocal(localFile(), BackupFileType.META_V2);
         try {

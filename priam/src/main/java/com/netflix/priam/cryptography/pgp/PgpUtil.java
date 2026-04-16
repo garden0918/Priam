@@ -17,9 +17,10 @@ import java.io.BufferedInputStream;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.security.NoSuchProviderException;
 import java.util.Iterator;
 import org.bouncycastle.openpgp.*;
+import org.bouncycastle.openpgp.operator.jcajce.JcaKeyFingerprintCalculator;
+import org.bouncycastle.openpgp.operator.jcajce.JcePBESecretKeyDecryptorBuilder;
 
 public class PgpUtil {
 
@@ -32,11 +33,10 @@ public class PgpUtil {
      * @return secret or private key corresponding to the keyID.
      * @throws PGPException if there is any exception in getting the PGP key corresponding to the ID
      *     provided.
-     * @throws NoSuchProviderException If PGP Provider is not available.
      */
     public static PGPPrivateKey findSecretKey(
             PGPSecretKeyRingCollection pgpSec, long keyID, char[] pass)
-            throws PGPException, NoSuchProviderException {
+            throws PGPException {
 
         PGPSecretKey pgpSecKey = pgpSec.getSecretKey(keyID);
 
@@ -44,7 +44,10 @@ public class PgpUtil {
             return null;
         }
 
-        return pgpSecKey.extractPrivateKey(pass, "BC");
+        return pgpSecKey.extractPrivateKey(
+                new JcePBESecretKeyDecryptorBuilder()
+                        .setProvider("BC")
+                        .build(pass));
     }
 
     public static PGPPublicKey readPublicKey(String fileName) throws IOException, PGPException {
@@ -67,7 +70,9 @@ public class PgpUtil {
     public static PGPPublicKey readPublicKey(InputStream input) throws IOException, PGPException {
 
         PGPPublicKeyRingCollection pgpPub =
-                new PGPPublicKeyRingCollection(PGPUtil.getDecoderStream(input));
+                new PGPPublicKeyRingCollection(
+                        PGPUtil.getDecoderStream(input),
+                        new JcaKeyFingerprintCalculator());
 
         //
         // we just loop through the collection till we find a key suitable for encryption, in the

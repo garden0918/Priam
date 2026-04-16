@@ -16,7 +16,6 @@ package com.netflix.priam.cryptography.pgp;
 import com.netflix.priam.config.IConfiguration;
 import com.netflix.priam.cryptography.IFileCryptography;
 import java.io.*;
-import java.security.NoSuchProviderException;
 import java.security.SecureRandom;
 import java.security.Security;
 import java.util.Date;
@@ -25,6 +24,7 @@ import javax.inject.Inject;
 import org.apache.commons.io.IOUtils;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.bouncycastle.openpgp.*;
+import org.bouncycastle.openpgp.operator.jcajce.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -56,7 +56,9 @@ public class PgpCryptography implements IFileCryptography {
 
         try {
 
-            return new PGPSecretKeyRingCollection(PGPUtil.getDecoderStream(keyIn));
+            return new PGPSecretKeyRingCollection(
+                    PGPUtil.getDecoderStream(keyIn),
+                    new JcaKeyFingerprintCalculator());
 
         } catch (Exception e) {
             logger.error(
@@ -102,7 +104,7 @@ public class PgpCryptography implements IFileCryptography {
         in = PGPUtil.getDecoderStream(in);
 
         // general class for reading a stream of data.
-        PGPObjectFactory inPgpReader = new PGPObjectFactory(in);
+        PGPObjectFactory inPgpReader = new PGPObjectFactory(in, new JcaKeyFingerprintCalculator());
         Object o = inPgpReader.nextObject();
 
         PGPEncryptedDataList encryptedDataList;
@@ -145,8 +147,9 @@ public class PgpCryptography implements IFileCryptography {
                             + ", Private key for message not found.");
 
         // finally, lets decrypt the object
-        InputStream decryptInputStream = encryptedDataStreamHandle.getDataStream(privateKey, "BC");
-        PGPObjectFactory decryptedDataReader = new PGPObjectFactory(decryptInputStream);
+        InputStream decryptInputStream = encryptedDataStreamHandle.getDataStream(
+                new JcePublicKeyDataDecryptorFactoryBuilder().setProvider("BC").build(privateKey));
+        PGPObjectFactory decryptedDataReader = new PGPObjectFactory(decryptInputStream, new JcaKeyFingerprintCalculator());
 
         // the decrypted data object is compressed, lets decompress it.
         // get a handle to the decrypted, compress data stream
@@ -154,7 +157,7 @@ public class PgpCryptography implements IFileCryptography {
                 (PGPCompressedData) decryptedDataReader.nextObject();
         InputStream compressedStream =
                 new BufferedInputStream(compressedDataReader.getDataStream());
-        PGPObjectFactory compressedStreamReader = new PGPObjectFactory(compressedStream);
+        PGPObjectFactory compressedStreamReader = new PGPObjectFactory(compressedStream, new JcaKeyFingerprintCalculator());
         Object data = compressedStreamReader.nextObject();
         if (data instanceof PGPLiteralData) {
             PGPLiteralData dataPgpReader = (PGPLiteralData) data;
@@ -185,14 +188,17 @@ public class PgpCryptography implements IFileCryptography {
      */
     private static PGPPrivateKey findSecretKey(
             PGPSecretKeyRingCollection securityCollection, long keyID, char[] pass)
-            throws PGPException, NoSuchProviderException {
+            throws PGPException {
 
         PGPSecretKey privateKey = securityCollection.getSecretKey(keyID);
         if (privateKey == null) {
             return null;
         }
 
-        return privateKey.extractPrivateKey(pass, "BC");
+        return privateKey.extractPrivateKey(
+                new JcePBESecretKeyDecryptorBuilder()
+                        .setProvider("BC")
+                        .build(pass));
     }
 
     @Override
@@ -300,11 +306,16 @@ public class PgpCryptography implements IFileCryptography {
             // creates a cipher stream which will have an integrity packet associated with it
             PGPEncryptedDataGenerator encryptedDataGenerator =
                     new PGPEncryptedDataGenerator(
-                            PGPEncryptedData.CAST5, true, new SecureRandom(), "BC");
+                            new JcePGPDataEncryptorBuilder(PGPEncryptedData.CAST5)
+                                    .setWithIntegrityPacket(true)
+                                    .setSecureRandom(new SecureRandom())
+                                    .setProvider("BC"));
             try {
                 // Add a key encryption method to be used to encrypt the session data associated
                 // with this encrypted data
-                encryptedDataGenerator.addMethod(pubKey);
+                encryptedDataGenerator.addMethod(
+                        new JcePublicKeyKeyEncryptionMethodGenerator(pubKey)
+                                .setProvider("BC"));
                 // wrapper around the buffer which will contain the encrypted data.
                 pgpBosWrapper = encryptedDataGenerator.open(bos, new byte[1 << 15]);
             } catch (Exception e) {

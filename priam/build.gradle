@@ -5,4 +5,11 @@ apply plugin: 'groovy'
  */
 test {
     jvmArgs "-javaagent:${classpath.find { it.name.contains("jmockit") }.absolutePath}"
+    jvmArgs '--add-opens', 'java.base/java.lang=ALL-UNNAMED'
+    jvmArgs '--add-opens', 'java.base/java.lang.reflect=ALL-UNNAMED'
+    jvmArgs '--add-opens', 'java.base/java.io=ALL-UNNAMED'
+    jvmArgs '--add-opens', 'java.base/java.util=ALL-UNNAMED'
+    jvmArgs '--add-opens', 'java.base/java.util.concurrent=ALL-UNNAMED'
+    jvmArgs '--add-opens', 'java.base/sun.security.ssl=ALL-UNNAMED'
+    useJUnitPlatform()
 }
